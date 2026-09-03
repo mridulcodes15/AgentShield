@@ -31,78 +31,6 @@ AgentShield addresses this gap by combining:
 
 This creates an additional safety layer between an autonomous agent's **intent to pay** and the payment system's **execution of that intent**.
 
----
-
-## 🏗️ System Architecture
-
-```mermaid
-flowchart TD
-
-    A["👤 User Authorization<br/>Natural-language spending instruction"]
-    B["🤖 AI Agent<br/>Proposes payment action"]
-
-    A --> C
-    B --> C
-
-    C["🧠 Intent Parser<br/>Groq LLM + Deterministic Validation<br/>Extract limit • category • constraints"]
-
-    C --> D{"Authorization<br/>Valid?"}
-
-    D -- "No" --> E["⚠️ STEP_UP<br/>Fresh User Authorization"]
-    E --> F{"User approves<br/>revised authorization?"}
-
-    F -- "No" --> X["✕ CANCEL<br/>No payment execution"]
-    F -- "Yes" --> G
-
-    D -- "Yes" --> G{"Sufficient Confirmed<br/>User History?"}
-
-    G -- "No · Cold Start" --> H["🛡️ Authorization-First Mode<br/>No fabricated behavioral score"]
-    H --> R
-
-    G -- "Yes" --> I["📊 Behavioral Risk Engine<br/>Logistic Regression"]
-
-    I --> J["Behavioral Signals<br/>Amount deviation<br/>Velocity deviation<br/>Merchant familiarity<br/>Category behavior"]
-
-    J --> K["⚙️ Adaptive Policy Engine"]
-
-    K --> L{"Risk + Strong<br/>Signal Evidence"}
-
-    L -- "Low Risk" --> R["✓ ALLOW"]
-    L -- "Elevated / High Risk" --> M["⚠️ STEP_UP<br/>Behavioral Confirmation"]
-    L -- "≥ 0.90 + ≥ 3 strong signals" --> N["⛔ BLOCK"]
-
-    M --> O{"User confirms exact<br/>transaction?"}
-
-    O -- "No" --> X
-    O -- "Yes" --> R
-
-    R --> P["💳 Razorpay Test Mode<br/>Create Test Order"]
-
-    P --> Q["🗃️ Persistent SQLite History<br/>Store confirmed transaction"]
-
-    Q -. "Future behavioral profile" .-> G
-
-    N --> S["🔒 Execution Prevented"]
-    X --> S
-
-    classDef input fill:#172554,stroke:#60a5fa,color:#fff,stroke-width:2px;
-    classDef engine fill:#312e81,stroke:#a78bfa,color:#fff,stroke-width:2px;
-    classDef decision fill:#422006,stroke:#fbbf24,color:#fff,stroke-width:2px;
-    classDef allow fill:#052e16,stroke:#4ade80,color:#fff,stroke-width:2px;
-    classDef step fill:#451a03,stroke:#fb923c,color:#fff,stroke-width:2px;
-    classDef block fill:#450a0a,stroke:#f87171,color:#fff,stroke-width:2px;
-    classDef payment fill:#082f49,stroke:#38bdf8,color:#fff,stroke-width:2px;
-
-    class A,B input;
-    class C,I,J,K engine;
-    class D,F,G,L,O decision;
-    class R,Q allow;
-    class E,M step;
-    class N,X,S block;
-    class P,H payment;
-
----
-
 ## ⚙️ How AgentShield Works
 
 AgentShield evaluates every proposed agent-initiated transaction through two separate security layers:
@@ -141,3 +69,37 @@ A Logistic Regression model produces a behavioral risk score, which is combined 
 
 > AgentShield treats an anomaly as a reason for **verification**, not automatically as fraud. Hard blocking is reserved for stronger combinations of independent risk signals.
 
+---
+
+## 🧊 Cold-Start Protection
+
+Behavioral models require historical data. AgentShield does **not fabricate a behavioral baseline for new users**.
+
+When a user has insufficient confirmed transaction history:
+
+- Explicit authorization checks remain active from the first transaction.
+- No artificial behavioral risk score is generated.
+- `risk_mode` is set to `COLD_START`.
+- An authorized transaction can proceed through the authorization-first flow.
+- Confirmed transactions gradually build the user's behavioral profile.
+
+Once sufficient confirmed history is available, AgentShield activates behavioral risk analysis.
+
+> **Authorization protection works from transaction #1. Behavioral protection becomes stronger as confirmed history accumulates.**
+
+---
+
+## 💳 Razorpay Test-Mode Integration
+
+AgentShield places the risk layer **before payment execution**.
+
+```text
+Agent proposes transaction
+        ↓
+AgentShield evaluates authorization + risk
+        ↓
+ALLOW / STEP_UP / BLOCK
+        ↓
+Approved transaction
+        ↓
+Razorpay Test Order Created
