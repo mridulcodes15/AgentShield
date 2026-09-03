@@ -1,20 +1,23 @@
 import html
+import os
+import sys
 from datetime import datetime
 
 import streamlit as st
 
-from src.risk_engine import train_behavioral_model
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
+from src.risk_engine import train_behavioral_model
 from src.decision_engine import (
     evaluate_agent_action,
     reevaluate_after_reauthorization,
     confirm_behavioral_step_up,
 )
-
 from src.history_store import (
     build_user_profile,
 )
-
 
 # ============================================================
 # PAGE CONFIG
