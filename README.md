@@ -100,3 +100,44 @@ flowchart TD
     class E,M step;
     class N,X,S block;
     class P,H payment;
+
+---
+
+## ⚙️ How AgentShield Works
+
+AgentShield evaluates every proposed agent-initiated transaction through two separate security layers:
+
+### 1. Authorization Layer
+
+The user's natural-language instruction is converted into structured constraints such as:
+
+- Maximum authorized amount
+- Allowed spending categories
+- Transaction context
+
+If the proposed transaction exceeds these permissions, AgentShield returns **`STEP_UP`** and requests fresh user authorization.
+
+An authorization violation is **not automatically classified as fraud**.
+
+### 2. Behavioral Risk Layer
+
+For users with sufficient confirmed transaction history, AgentShield evaluates behavioral signals including:
+
+- Amount deviation from historical spending
+- Transaction velocity deviation
+- Merchant familiarity
+- Usual category behavior
+
+A Logistic Regression model produces a behavioral risk score, which is combined with interpretable anomaly signals by the policy engine.
+
+### Adaptive Decision Policy
+
+| Condition | Decision | Action |
+|---|---|---|
+| Authorization violated | `STEP_UP` | Request fresh authorization |
+| Authorized + low behavioral risk | `ALLOW` | Permit test-order execution |
+| Authorized + elevated/high risk | `STEP_UP` | Ask user to confirm the exact transaction |
+| Risk ≥ 0.90 + ≥ 3 strong anomaly signals | `BLOCK` | Prevent execution |
+
+> AgentShield treats an anomaly as a reason for **verification**, not automatically as fraud. Hard blocking is reserved for stronger combinations of independent risk signals.
+
