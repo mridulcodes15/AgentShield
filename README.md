@@ -60,39 +60,7 @@ Only approved actions proceed to Razorpay test-order creation.
 
 ## 🏗️ System Architecture
 
-AgentShield follows an authorization-first, risk-aware payment flow:
-
-```text
-User Authorization ─────┐
-                        │
-AI Agent Action ────────┴──► Intent Parser
-                               │
-                               ▼
-                      Authorization Check
-                         │             │
-                      Invalid        Valid
-                         │             │
-                     STEP_UP      History Check
-                                       │
-                              ┌────────┴────────┐
-                              │                 │
-                         Cold Start       Established User
-                              │                 │
-                    Authorization Only    Behavioral ML
-                              │                 │
-                              │          Adaptive Policy
-                              │           │     │     │
-                              │        ALLOW STEP_UP BLOCK
-                              │           │     │
-                              └───────────┤     │
-                                          ▼     ▼
-                                    Razorpay   Stop
-                                    Test Order
-                                          │
-                                          ▼
-                                   SQLite History
-```
-
+AgentShield follows an authorization-first, risk-aware architecture that separates explicit user permission from behavioral risk evaluation.
 📐 **Detailed Mermaid architecture:** [View the complete system architecture](docs/architecture.md)
 
 ---
